@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Imovel, Endereco } from '../models/imovel.model';
-
+import { Imovel } from '../models/imovel.model';
+import { Endereco } from '../models/endereco.model';
 @Injectable({
   providedIn: 'root',
 })
@@ -37,5 +37,9 @@ export class ApiService {
   consultarCEP(cep: string): Observable<Endereco> {
     const url = `https://viacep.com.br/ws/${cep}/json/`;
     return this.http.get<Endereco>(url);
+  }
+
+  getEnderecoByCep(cep: string): Observable<Endereco> {
+    return this.http.get<Endereco>(`https://api.example.com/cep/${cep}`);
   }
 }

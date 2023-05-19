@@ -1,19 +1,22 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ReactiveFormsModule } from '@angular/forms';
-import { ImovelComponent } from './imovel.component';
-import { ApiService } from '../services/api.service';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { of } from 'rxjs';
+import { ApiService } from '../services/api.service';
+import { ImovelComponent } from './imovel.component';
+import { Imovel } from '../models/imovel.model';
+import { Endereco } from '../models/endereco.model';
 
 describe('ImovelComponent', () => {
   let component: ImovelComponent;
   let fixture: ComponentFixture<ImovelComponent>;
   let apiService: ApiService;
+  let formBuilder: FormBuilder;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ReactiveFormsModule],
       declarations: [ImovelComponent],
-      providers: [ApiService],
+      imports: [ReactiveFormsModule],
+      providers: [ApiService, FormBuilder]
     }).compileComponents();
   });
 
@@ -21,6 +24,7 @@ describe('ImovelComponent', () => {
     fixture = TestBed.createComponent(ImovelComponent);
     component = fixture.componentInstance;
     apiService = TestBed.inject(ApiService);
+    formBuilder = TestBed.inject(FormBuilder);
     fixture.detectChanges();
   });
 
@@ -28,65 +32,62 @@ describe('ImovelComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should load imoveis on initialization', () => {
-    const mockImoveis = [
-      { id: 1, nome: 'Imóvel 1' },
-      { id: 2, nome: 'Imóvel 2' },
-    ];
-
-    spyOn(apiService, 'getImoveis').and.returnValue(of(mockImoveis));
-
-    component.ngOnInit();
-
-    expect(component.imoveis).toEqual(mockImoveis);
-    expect(apiService.getImoveis).toHaveBeenCalled();
-  });
-
-  it('should reset imovelForm and load imoveis on form submission', () => {
-    const mockImovel = { nome: 'Imóvel 1', tipo: 'Casa' };
-
-    spyOn(apiService, 'createImovel').and.returnValue(of({}));
-    spyOn(component, 'loadImoveis');
-
-    component.imovelForm.setValue(mockImovel);
-    component.onSubmit();
-
-    expect(apiService.createImovel).toHaveBeenCalledWith(mockImovel);
-    expect(component.imovelForm.valid).toBe(true);
-    expect(component.imovelForm.value).toEqual({
-      nome: '',
-      tipo: '',
-      valor: '',
-      condominio: '',
-      quartos: '',
-      banheiros: '',
-      mobiliado: '',
-      area: '',
-      venda: false,
-      aluguel: false,
-      dataAnuncio: '',
-      endereco: {
-        rua: '',
-        numero: '',
-        bairro: '',
-        cidade: '',
-        uf: '',
-        cep: '',
-      },
-      proprietarioId: '',
+  it('should save imovel', () => {
+    spyOn(apiService, 'createImovel').and.returnValue(of({} as Imovel));
+    component.imovelForm.patchValue({
+      nome: 'Imóvel 1',
+      tipo: 'Casa',
+      valor: 100000,
+      cep: '12345678',
+      rua: 'Rua Teste',
+      cidade: 'Cidade Teste',
+      // Adicione outras propriedades necessárias
     });
-    expect(component.loadImoveis).toHaveBeenCalled();
+    component.saveImovel();
+    expect(apiService.createImovel).toHaveBeenCalledWith(component.imovelForm.value);
   });
 
-  it('should load imoveis on imovel deletion', () => {
-    const mockImovelId = 1;
+  it('should update imovel', () => {
+    spyOn(apiService, 'updateImovel').and.returnValue(of({} as Imovel));
+    component.imovelForm.patchValue({
+      id: 1,
+      nome: 'Imóvel 1',
+      tipo: 'Casa',
+      valor: 100000,
+      cep: '12345678',
+      rua: 'Rua Teste',
+      cidade: 'Cidade Teste',
+      // Adicione outras propriedades necessárias
+    });
+    component.updateImovel();
+    expect(apiService.updateImovel).toHaveBeenCalledWith(component.imovelForm.value.id, component.imovelForm.value);
+  });
 
+  it('should delete imovel', () => {
     spyOn(apiService, 'deleteImovel').and.returnValue(of({}));
-    spyOn(component, 'loadImoveis');
+    const mockImovel: Imovel = {
+      id: 1,
+      nome: 'Imóvel 1',
+      tipo: 'Casa',
+      valor: 100000,
+      // Adicione outras propriedades necessárias
+    };
+    component.deleteImovel(mockImovel);
+    expect(apiService.deleteImovel).toHaveBeenCalledWith(mockImovel.id);
+  });
 
-    component.deleteImovel(mockImovelId);
-
-    expect(apiService.deleteImovel).toHaveBeenCalledWith(mockImovelId);
-    expect(component.loadImoveis).toHaveBeenCalled();
+  it('should get endereco by cep', () => {
+    const cep = '12345678';
+    const mockEndereco: Endereco = {
+      logradouro: 'Rua Teste',
+      localidade: 'Cidade Teste',
+      // Adicione outras propriedades do endereço se necessário
+    };
+    spyOn(apiService, 'getEnderecoByCep').and.returnValue(of(mockEndereco));
+    component.imovelForm.patchValue({ cep });
+    component.getCep();
+    expect(apiService.getEnderecoByCep).toHaveBeenCalledWith(cep);
+    expect(component.imovelForm.value.rua).toEqual(mockEndereco.logradouro);
+    expect(component.imovelForm.value.cidade).toEqual(mockEndereco.localidade);
   });
 });

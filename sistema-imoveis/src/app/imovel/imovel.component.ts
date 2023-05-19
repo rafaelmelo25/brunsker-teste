@@ -1,98 +1,81 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup } from '@angular/forms';
 import { ApiService } from '../services/api.service';
-import { Imovel, Endereco } from '../models/imovel.model';
+import { Endereco } from '../models/endereco.model';
+import { Imovel } from '../models/imovel.model';
+
 
 @Component({
   selector: 'app-imovel',
   templateUrl: './imovel.component.html',
-  styleUrls: ['./imovel.component.sass'],
+  styleUrls: ['./imovel.component.sass']
 })
 export class ImovelComponent implements OnInit {
+  imovel!: Imovel;
+  editarImovel: boolean = false;
+  imovelForm!: FormGroup;
   imoveis: Imovel[] = [];
-  imovelForm: FormGroup;
-  
-  constructor(private formBuilder: FormBuilder, private apiService: ApiService) {
+
+  constructor(private formBuilder: FormBuilder, private apiService: ApiService) {}
+
+  ngOnInit(): void {
     this.imovelForm = this.formBuilder.group({
-      nome: ['', Validators.required],
-      tipo: ['', Validators.required],
-      valor: ['', Validators.required],
-      condominio: [''],
-      quartos: ['', Validators.required],
-      banheiros: ['', Validators.required],
-      mobiliado: [''],
-      area: ['', Validators.required],
-      venda: [false],
-      aluguel: [false],
-      dataAnuncio: [''],
-      endereco: this.formBuilder.group({
-        rua: [''],
-        numero: [''],
-        bairro: [''],
-        cidade: [''],
-        uf: [''],
-        cep: ['', Validators.required],
-      }),
-      proprietarioId: [''],
+      id: null,
+      nome: '',
+      tipo: '',
+      valor: null,
+      cep: '',
+      rua: '',
+      cidade: '',
+      localidade: '',
+      // outras propriedades necessárias
+    });
+
+    this.apiService.getImoveis().subscribe((imoveis: Imovel[]) => {
+      this.imoveis = imoveis;
     });
   }
 
-  ngOnInit(): void {
-    this.loadImoveis();
+  saveImovel(): void {
+    this.apiService.createImovel(this.imovelForm.value).subscribe((response) => {
+      // Lógica após salvar o imóvel
+    });
   }
 
-  loadImoveis(): void {
-    this.apiService.getImoveis().subscribe(
-      (imoveis) => {
-        this.imoveis = imoveis;
-      },
-      (error) => {
-        console.log(error); // Lida com o erro de carregamento dos imóveis
-      }
-    );
+  toggleEditarImovel(): void {
+    this.editarImovel = !this.editarImovel;
+  }
+
+  updateImovel(): void {
+    const id = this.imovelForm.value.id;
+    this.apiService.updateImovel(id, this.imovelForm.value).subscribe((response) => {
+      // Lógica após atualizar o imóvel
+    });
+  }
+
+  deleteImovel(imovel: Imovel): void {
+    this.apiService.deleteImovel(imovel.id).subscribe(() => {
+      // Lógica adicional, se necessário
+    });
+  }
+
+  getCep(): void {
+    const cep = this.imovelForm.value.cep;
+    this.apiService.getEnderecoByCep(cep).subscribe((endereco: Endereco) => {
+      this.imovelForm.patchValue({
+        rua: endereco.logradouro,
+        cidade: endereco.cidade,
+        localidade: endereco.localidade,
+        // atualize outras propriedades do endereço conforme necessário
+      });
+    });
   }
 
   onSubmit(): void {
-    if (this.imovelForm.valid) {
-      const imovel: Imovel = this.imovelForm.value;
-      this.apiService.createImovel(imovel).subscribe(
-        () => {
-          this.imovelForm.reset();
-          this.loadImoveis();
-        },
-        (error) => {
-          console.log(error); // Lida com o erro de criação do imóvel
-        }
-      );
+    if (this.imovelForm.invalid) {
+      return;
     }
-  }
 
-  deleteImovel(id: number): void {
-    this.apiService.deleteImovel(id).subscribe(
-      () => {
-        this.loadImoveis();
-      },
-      (error) => {
-        console.log(error); // Lida com o erro de exclusão do imóvel
-      }
-    );
-  }
-
-  consultarCEP(): void {
-    const cep = this.imovelForm.get('endereco.cep')?.value;
-    if (cep) {
-      this.apiService.consultarCEP(cep).subscribe(
-        (endereco: Endereco) => {
-          // Lógica para manipular os dados do endereço retornado
-        },
-        (error: any) => {
-          console.log(error); // Lida com o erro de consulta do CEP
-        }
-      );
-    }
-  }
-
-  editarImovel(imovel: Imovel): void {
-    // Lógica para editar o imóvel
+    // Lógica para manipular o formulário enviado
   }
 }
